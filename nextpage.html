@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera Access Page</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body, html {
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .video-container {
+      width: 80%;
+      max-width: 600px;
+      height: 400px;
+      background-color: #000;
+      margin-bottom: 20px;
+      border-radius: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #ffb6c1;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin: 10px;
+    }
+
+    button:hover {
+      background-color: #ff8fa3;
+    }
+
+    .error-message {
+      color: red;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    /* Canvas style for captured image */
+    .captured-image {
+      margin-top: 20px;
+      border: 2px solid #ccc;
+      padding: 10px;
+      max-width: 80%;
+      max-height: 400px;
+      display: none; /* Hidden initially */
+    }
+
+    /* Video mirror effect */
+    .flipped {
+      transform: scaleX(-1); /* Flip the video horizontally */
+    }
+
+    /* Image preview style */
+    .image-preview {
+      margin-top: 20px;
+      max-width: 80%;
+      max-height: 400px;
+      border: 2px solid #ccc;
+      display: none; /* Hidden initially */
+    }
+
+    /* Custom file input button style */
+    .file-input-container {
+      position: relative;
+      display: inline-block;
+      margin-top: 20px;
+    }
+
+    #file-input {
+      display: none; /* Hide the default file input */
+    }
+
+    .file-input-button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #ffb6c1;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .file-input-button:hover {
+      background-color: #ff8fa3;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="font-family: monospace, 'Gill Sans MT';">Access Camera</h1>
+  <div class="video-container" id="video-container">
+    <video id="video" width="100%" height="100%" autoplay></video>
+  </div>
+  
+  <button style="font-family: monospace, 'Gill Sans MT';" id="start-button" onclick="startCamera()">Open Camera</button>
+  <button style="font-family: monospace, 'Gill Sans MT';" id="capture-button" onclick="captureImage()" style="display: none;">Capture Image</button>
+  <button style="font-family: monospace, 'Gill Sans MT';" onclick="goBack()">Back to Index</button>
+  <button style="font-family: monospace, 'Gill Sans MT';" id="flip-button" onclick="flipCamera()" style="display: none;">Flip Camera Left to Right</button>
+  
+  <!-- Custom "Choose File" Button -->
+  <div class="file-input-container">
+    <input type="file" id="file-input" onchange="loadImage()" />
+    <button style="font-family: monospace, 'Gill Sans MT';" class="file-input-button" onclick="document.getElementById('file-input').click();">Import Image</button>
+  </div>
+  
+  <!-- Image preview -->
+  <img id="image-preview" class="image-preview" />
+
+  <div class="captured-image-container">
+    <canvas id="canvas" class="captured-image"></canvas>
+  </div>
+  
+  <div class="error-message" id="error-message"></div>
+
+  <script>
+    const videoElement = document.getElementById('video');
+    const startButton = document.getElementById('start-button');
+    const captureButton = document.getElementById('capture-button');
+    const flipButton = document.getElementById('flip-button');
+    const canvas = document.getElementById('canvas');
+    const errorMessage = document.getElementById('error-message');
+    const fileInput = document.getElementById('file-input');
+    const imagePreview = document.getElementById('image-preview');
+
+    let currentStream;
+    
+    // Function to start the camera
+    function startCamera() {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(function(stream) {
+            // Stop any previously active streams
+            if (currentStream) {
+              currentStream.getTracks().forEach(track => track.stop());
+            }
+
+            // Assign the new stream to the video element
+            videoElement.srcObject = stream;
+            currentStream = stream;
+
+            // Show the capture and flip buttons
+            startButton.style.display = 'none';
+            captureButton.style.display = 'inline';
+            flipButton.style.display = 'inline';
+          })
+          .catch(function(error) {
+            errorMessage.textContent = "Could not access the camera.";
+          });
+      } else {
+        errorMessage.textContent = "Your browser does not support camera access.";
+      }
+    }
+
+    // Function to capture image from the video feed
+    function captureImage() {
+      const context = canvas.getContext('2d');
+      const videoWidth = videoElement.videoWidth;
+      const videoHeight = videoElement.videoHeight;
+
+      // Set canvas size to match video feed
+      canvas.width = videoWidth;
+      canvas.height = videoHeight;
+
+      // Draw the current frame from the video onto the canvas
+      context.drawImage(videoElement, 0, 0, videoWidth, videoHeight);
+
+      // Hide image preview and show canvas as the final image
+      imagePreview.style.display = 'none';
+      canvas.style.display = 'block';
+    }
+
+    // Function to flip the video horizontally (left to right)
+    function flipCamera() {
+      // Toggle the 'flipped' class to apply CSS transform
+      videoElement.classList.toggle('flipped');
+    }
+
+    // Function to load and preview an image from file input
+    function loadImage() {
+      const file = fileInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          // Set image preview source
+          imagePreview.src = event.target.result;
+          imagePreview.style.display = 'block';
+
+          // Hide canvas and show the imported image as the final image
+          canvas.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Function to go back to the index page
+    function goBack() {
+      window.location.href = 'indexx.html';
+    }
+  </script>
+</body>
+</html>
